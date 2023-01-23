@@ -12,6 +12,7 @@ from torch.autograd import Variable
 
 pi = Variable(torch.FloatTensor([math.pi])).cuda()
 
+
 def normal(x, mu, sigma_sq):
     a = (-1*(Variable(x)-mu).pow(2)/(2*sigma_sq)).exp()
     b = 1/(2*sigma_sq*pi.expand_as(sigma_sq)).sqrt()
@@ -22,7 +23,8 @@ class Policy(nn.Module):
     def __init__(self, hidden_size, num_inputs, action_space):
         super(Policy, self).__init__()
         self.action_space = action_space
-        num_outputs = action_space.shape[0]
+        # print(action_space)
+        num_outputs = action_space
 
         self.linear1 = nn.Linear(num_inputs, hidden_size)
         self.linear2 = nn.Linear(hidden_size, num_outputs)
@@ -41,9 +43,9 @@ class REINFORCE:
     def __init__(self, hidden_size, num_inputs, action_space):
         self.action_space = action_space
         self.model = Policy(hidden_size, num_inputs, action_space)
-	self.model = self.model.cuda()
+        self.model = self.model.cuda()
         self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
-	self.model.train()
+        self.model.train()
 
     def select_action(self, state):
         mu, sigma_sq = self.model(Variable(state).cuda())
@@ -63,10 +65,11 @@ class REINFORCE:
         loss = 0
         for i in reversed(range(len(rewards))):
             R = gamma * R + rewards[i]
-            loss = loss - (log_probs[i]*(Variable(R).expand_as(log_probs[i])).cuda()).sum() - (0.0001*entropies[i].cuda()).sum()
+            loss = loss - (log_probs[i]*(Variable(R).expand_as(log_probs[i])
+                                         ).cuda()).sum() - (0.0001*entropies[i].cuda()).sum()
         loss = loss / len(rewards)
-		
+
         self.optimizer.zero_grad()
         loss.backward()
-	utils.clip_grad_norm(self.model.parameters(), 40)
+        utils.clip_grad_norm(self.model.parameters(), 40)
         self.optimizer.step()

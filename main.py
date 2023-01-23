@@ -1,4 +1,6 @@
-import argparse, math, os
+import argparse
+import math
+import os
 import numpy as np
 import gym
 from gym import wrappers
@@ -25,31 +27,36 @@ parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                     help='number of episodes (default: 128)')
 parser.add_argument('--render', action='store_true',
                     help='render the environment')
-parser.add_argument('--ckpt_freq', type=int, default=100, 
-		    help='model saving frequency')
+parser.add_argument('--ckpt_freq', type=int, default=100,
+                    help='model saving frequency')
 parser.add_argument('--display', type=bool, default=False,
                     help='display or not')
 args = parser.parse_args()
 
-env_name = args.env_name
-env = gym.make(env_name)
+env_name = 'Pendulum-v1'
+# env = gym.make(env_name)
+env= gym.make('Pendulum-v1')
 if type(env.action_space) != gym.spaces.discrete.Discrete:
     from reinforce_continuous import REINFORCE
-    env = NormalizedActions(gym.make(env_name))
+    # env = NormalizedActions(gym.make(env_name))
+    env= gym.make('Pendulum-v1')
+    
 else:
     from reinforce_discrete import REINFORCE
 
 if args.display:
-    env = wrappers.Monitor(env, '/tmp/{}-experiment'.format(env_name), force=True)
+    env = wrappers.Monitor(
+        env, '/tmp/{}-experiment'.format(env_name), force=True)
 
 env.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
-agent = REINFORCE(args.hidden_size, env.observation_space.shape[0], env.action_space)
+agent = REINFORCE(args.hidden_size,
+                  env.observation_space.shape[0], env.action_space.shape[0])
 
 dir = 'ckpt_' + env_name
-if not os.path.exists(dir):    
+if not os.path.exists(dir):
     os.mkdir(dir)
 
 for i_episode in range(args.num_episodes):
@@ -61,7 +68,9 @@ for i_episode in range(args.num_episodes):
         action, log_prob, entropy = agent.select_action(state)
         action = action.cpu()
 
+
         next_state, reward, done, _ = env.step(action.numpy()[0])
+
 
         entropies.append(entropy)
         log_probs.append(log_prob)
@@ -73,10 +82,10 @@ for i_episode in range(args.num_episodes):
 
     agent.update_parameters(rewards, log_probs, entropies, args.gamma)
 
-
-    if i_episode%args.ckpt_freq == 0:
-	torch.save(agent.model.state_dict(), os.path.join(dir, 'reinforce-'+str(i_episode)+'.pkl'))
+    # if i_episode % args.ckpt_freq == 0:
+    #     torch.save(agent.model.state_dict(), os.path.join(
+    #         dir, 'reinforce-'+str(i_episode)+'.pkl'))
 
     print("Episode: {}, reward: {}".format(i_episode, np.sum(rewards)))
-	
+
 env.close()
